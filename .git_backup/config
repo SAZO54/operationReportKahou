@@ -1,0 +1,11 @@
+[core]
+	repositoryformatversion = 0
+	filemode = true
+	bare = false
+	logallrefupdates = true
+[user]
+	name = SAZO54
+	email = zosaro2126@gmail.com
+[remote "origin"]
+	url = https://github.com/SAZO54/operationReportKahou.git
+	fetch = +refs/heads/*:refs/remotes/origin/*
