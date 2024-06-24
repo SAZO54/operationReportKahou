@@ -37,10 +37,11 @@ export async function postDailyReportMessage(client, user) {
       blocks: blocks,
     });
 
+    console.log('DMに稼働報告を送信しました🎀:', result.ts);
     return result.ts;
   } catch (error) {
     console.error('Error posting daily report message:', error);
-    throw error; // エラーが発生した場合にエラーをスロー
+    throw error;
   }
 }
 
