@@ -1,6 +1,29 @@
-export async function updateHomeTab(client, user) {
+import { getChannels } from './setting.js';
+
+async function updateHomeTab(client, user) {
   try {
     console.log('updateHomeTab function called for user:', user);
+
+    const channels = getChannels();
+    console.log('channels:', channels);
+
+    let channelNames = [];
+    if (channels.length > 0) {
+      channelNames = await Promise.all(channels.map(async function(channelId) {
+        try {
+          await client.conversations.join({ channel: channelId });
+          const result = await client.conversations.info({ channel: channelId });
+          return result.channel.name;
+        } catch (error) {
+          console.error('Error retrieving or joining channel info for ID ' + channelId + ':', error);
+          return 'Error retrieving or joining channel info for ID ' + channelId;
+        }
+      }));
+    }
+
+    const channelListText = channelNames.length > 0 ? channelNames.map(function(name) {
+      return '- ' + name;
+    }).join('\n') : 'まだチャンネルが設定されていません。';
 
     const blocks = [
       {
@@ -18,42 +41,7 @@ export async function updateHomeTab(client, user) {
         type: 'section',
         text: {
           type: 'mrkdwn',
-          text: '\n'
-        }
-      },
-      {
-        type: 'section',
-        text: {
-          type: 'mrkdwn',
-          text: '\n'
-        }
-      },
-      {
-        type: 'section',
-        text: {
-          type: 'mrkdwn',
-          text: '*📮 稼働報告*'
-        }
-      },
-      {
-        type: 'section',
-        text: {
-          type: 'mrkdwn',
-          text: '\n'
-        }
-      },
-      {
-        type: 'section',
-        text: {
-          type: 'mrkdwn',
-          text: '稼働報告は、hogeチャンネルに投稿されます✨\n\n'
-        }
-      },
-      {
-        type: 'section',
-        text: {
-          type: 'mrkdwn',
-          text: '\n'
+          text: '稼働報告は、以下のチャンネルに投稿されます✨\n\n' + channelListText
         }
       },
       {
@@ -68,12 +56,10 @@ export async function updateHomeTab(client, user) {
             action_id: 'setting'
           }
         ]
-      },
+      }
     ];
 
     if (user === process.env.ADMIN_USER_ID) {
-      console.log('Admin user detected, adding admin settings button');
-      // Add the new actions block for the admin button
       blocks.push({
         type: 'actions',
         elements: [
@@ -83,7 +69,7 @@ export async function updateHomeTab(client, user) {
               type: 'plain_text',
               text: '🎀 投稿するチャンネルを管理する'
             },
-            action_id: 'open_settings'
+            action_id: 'open_users_list'
           }
         ]
       });
@@ -100,4 +86,6 @@ export async function updateHomeTab(client, user) {
   } catch (error) {
     console.error('アプリホームタブの表示でエラーが発生しました:', error);
   }
-};
+}
+
+export { updateHomeTab };

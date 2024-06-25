@@ -8,6 +8,7 @@ import { openSettings, handleSettingSubmission } from './components/setting.js';
 import { handleReportSubmission } from './components/transmission.js';
 import scheduleReport from './components/generalReport.js';
 import { postDailyReportMessage } from './components/appMessage.js';
+import { openUsersListModal, handleUserListModalSubmission } from './components/usersListModal.js';
 
 const { App } = pkg;
 dotenv.config();
@@ -19,16 +20,14 @@ const app = new App({
   signingSecret: process.env.SLACK_SIGNING_SECRET
 });
 
-export { app };
-
 const ADMIN_USER_ID = process.env.ADMIN_USER_ID;
 
-app.event('app_home_opened', async ({ event, client }) => {
+app.event('app_home_opened', async function({ event, client }) {
   console.log('app_home_opened event received for user:', event.user);
   await updateHomeTab(client, event.user);
 });
 
-app.event('reaction_added', async ({ event, client }) => {
+app.event('reaction_added', async function({ event, client }) {
   console.log('Reaction added event received:', event);
   if (event.reaction === '出勤') {
     console.log('出勤 reaction detected');
@@ -37,33 +36,38 @@ app.event('reaction_added', async ({ event, client }) => {
   }
 });
 
-app.action('report_activity', async ({ ack, body, client }) => {
+app.action('report_activity', async function({ ack, body, client }) {
   await ack();
   const messageTs = body.message.ts;
   await reportOpenForm(client, body.trigger_id, messageTs);
 });
 
-app.action('setting', async ({ ack, body, client }) => {
+app.action('setting', async function({ ack, body, client }) {
   await ack();
   await openSettings(client, body.trigger_id, body.user.id);
 });
 
-app.action('open_settings', async ({ ack, body, client }) => {
+app.action('open_users_list', async function({ ack, body, client }) {
   await ack();
-  await openSettings(client, body.trigger_id, body.user.id);
+  await openUsersListModal(client, body.trigger_id);
 });
 
-app.view('submit_report', async ({ ack, body, view, client }) => {
+app.view('submit_report', async function({ ack, body, view, client }) {
   await ack();
   await handleReportSubmission(client, { user: body.user, view });
 });
 
-app.view('submit_setting', async ({ ack, body, view, client }) => {
+app.view('submit_setting', async function({ ack, body, view, client }) {
   await ack();
-  await handleSettingSubmission(view);
+  await handleSettingSubmission(view, client);
 });
 
-(async () => {
+app.view('user_list_modal', async function({ ack, body, view, client }) {
+  await ack();
+  await handleUserListModalSubmission(view, client);
+});
+
+(async function() {
   await app.start();
   console.log('⚡️ Bolt app is running!');
 
