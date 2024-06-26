@@ -1,15 +1,60 @@
 export async function updateHomeTab(client, user) {
   try {
+    console.log('updateHomeTab function called for user:', user);
+
     const blocks = [
       {
-        type: 'section',
+        type: 'header',
         text: {
-          type: 'mrkdwn',
-          text: '*🌐 設定メニュー*'
+          type: 'plain_text',
+          text: '🌐 設定',
+          emoji: true,
         }
       },
       {
         type: 'divider'
+      },
+      {
+        type: 'section',
+        text: {
+          type: 'mrkdwn',
+          text: '\n'
+        }
+      },
+      {
+        type: 'section',
+        text: {
+          type: 'mrkdwn',
+          text: '\n'
+        }
+      },
+      {
+        type: 'section',
+        text: {
+          type: 'mrkdwn',
+          text: '*📮 稼働報告*'
+        }
+      },
+      {
+        type: 'section',
+        text: {
+          type: 'mrkdwn',
+          text: '\n'
+        }
+      },
+      {
+        type: 'section',
+        text: {
+          type: 'mrkdwn',
+          text: '稼働報告は、hogeチャンネルに投稿されます✨\n\n'
+        }
+      },
+      {
+        type: 'section',
+        text: {
+          type: 'mrkdwn',
+          text: '\n'
+        }
       },
       {
         type: 'actions',
@@ -18,32 +63,40 @@ export async function updateHomeTab(client, user) {
             type: 'button',
             text: {
               type: 'plain_text',
-              text: '🐱個人設定'
+              text: '🐱 投稿するチャンネルを変更する'
             },
             action_id: 'setting'
           }
         ]
-      }
+      },
     ];
 
     if (user === process.env.ADMIN_USER_ID) {
-      blocks[1].elements.push({
-        type: 'button',
-        text: {
-          type: 'plain_text',
-          text: '🎀投稿するチャンネルを管理する'
-        },
-        action_id: 'open_settings'
+      console.log('Admin user detected, adding admin settings button');
+      // Add the new actions block for the admin button
+      blocks.push({
+        type: 'actions',
+        elements: [
+          {
+            type: 'button',
+            text: {
+              type: 'plain_text',
+              text: '🎀 投稿するチャンネルを管理する'
+            },
+            action_id: 'open_settings'
+          }
+        ]
       });
     }
 
-    await client.views.publish({
+    const result = await client.views.publish({
       user_id: user,
       view: {
         type: 'home',
         blocks: blocks
       }
     });
+    console.log('appHomeタブに送信しました:', result);
   } catch (error) {
     console.error('アプリホームタブの表示でエラーが発生しました:', error);
   }

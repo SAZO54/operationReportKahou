@@ -24,6 +24,7 @@ export { app };
 const ADMIN_USER_ID = process.env.ADMIN_USER_ID;
 
 app.event('app_home_opened', async ({ event, client }) => {
+  console.log('app_home_opened event received for user:', event.user);
   await updateHomeTab(client, event.user);
 });
 
@@ -65,6 +66,10 @@ app.view('submit_setting', async ({ ack, body, view, client }) => {
 (async () => {
   await app.start();
   console.log('⚡️ Bolt app is running!');
+
+  // 手動でホームタブを更新
+  const testUserId = process.env.ADMIN_USER_ID; // 確認用に管理者のユーザーIDを使用
+  await updateHomeTab(app.client, testUserId);
 
   scheduleReport(app);
 })();

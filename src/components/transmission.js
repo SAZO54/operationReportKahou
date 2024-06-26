@@ -1,5 +1,6 @@
 import { getChannels } from './setting.js';
 import { generalMessageTs, generalChannelId } from './generalReport.js';
+import { getFormattedDate } from './utils.js';
 
 export async function handleReportSubmission(client, { user, view }) {
   try {
@@ -32,60 +33,36 @@ export async function handleReportSubmission(client, { user, view }) {
     const messageTs = privateMetadata.messageTs;
     console.log('privateMetaData', privateMetadata);
     console.log('messageTs', messageTs);
+    const formattedDate = getFormattedDate();
+    const messageText = `${formattedDate}の稼働報告をお願いいたします✨\n\n稼働報告を行いました🎉`;
 
     // ダイレクトメッセージ内のメッセージを更新
     const dmChannel = await client.conversations.open({ users: userId });
+    if (!dmChannel.ok) {
+      throw new Error(`Failed to open DM channel for user ${userId}`);
+    }
     const dmChannelId = dmChannel.channel.id;
     console.log('dmChannel', dmChannel);
     console.log('dmChannelId', dmChannelId);
 
-    await client.chat.update({
+    const blocks = [
+      {
+        type: 'section',
+        text: {
+          type: 'mrkdwn',
+          text: messageText,
+        },
+      },
+    ];
+
+    const result = await client.chat.update({
       channel: dmChannelId,
       ts: messageTs,
-      text: '稼働報告を行いました🎉',
-      blocks: [
-        {
-          type: 'section',
-          text: {
-            type: 'mrkdwn',
-            text: '稼働報告を行いました🎉'
-          }
-        },
-        {
-          type: 'actions',
-          elements: [
-            {
-              type: 'button',
-              text: {
-                type: 'plain_text',
-                text: '📮稼働報告',
-              },
-              action_id: 'report_activity',
-              style: 'primary',
-              confirm: {
-                title: {
-                  type: 'plain_text',
-                  text: '確認'
-                },
-                text: {
-                  type: 'mrkdwn',
-                  text: 'すでに稼働報告を行いました。このボタンを再度押しますか？'
-                },
-                confirm: {
-                  type: 'plain_text',
-                  text: 'はい'
-                },
-                deny: {
-                  type: 'plain_text',
-                  text: 'いいえ'
-                }
-              },
-              disabled: true // ボタンを無効化
-            }
-          ]
-        }
-      ]
+      text: messageText,
+      blocks: blocks,
     });
+
+    console.log('DMの書き換えが完了しました🎉:', result);
 
   } catch (error) {
     console.error('Error in handleReportSubmission:', error);
