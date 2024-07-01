@@ -1,12 +1,16 @@
-import { getFormattedDate } from './utils.js';
+import { getFormattedDate } from 'components/utils';
+import { WebClient } from '@slack/web-api';
 
-export async function postDailyReportMessage(client, user) {
+export async function postDailyReportMessage(client: WebClient, user: string) {
   const formattedDate = getFormattedDate();
   const messageText = `${formattedDate}の稼働報告をお願いいたします✨`;
 
   try {
     const res = await client.conversations.open({ users: user });
-    const channelId = res.channel.id;
+    const channelId = res.channel?.id;
+    if (!channelId) {
+      throw new Error('Failed to open conversation');
+    }
 
     const blocks = [
       {

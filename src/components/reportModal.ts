@@ -1,6 +1,7 @@
-import { getChannels } from './setting.js';
+import { WebClient } from '@slack/web-api';
+import { getChannels } from 'components/setting';
 
-export async function openForm(client, trigger_id, messageTs) {
+export async function openForm(client: WebClient, trigger_id: string, messageTs: string) {
   try {
     await client.views.open({
       trigger_id: trigger_id,

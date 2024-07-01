@@ -1,16 +1,17 @@
+import { WebClient } from '@slack/web-api';
 import schedule from 'node-schedule';
-import { getFormattedDate } from './utils.js';
+import { getFormattedDate } from 'components/utils';
 
-let generalMessageTs;
+let generalMessageTs: string | undefined;
 const generalChannelId = 'C04GLB9K6HH';
 
 // 毎週月～金 07:00にメッセージ投稿
-function scheduleReport(app) {
+function scheduleReport(app: { client: WebClient }) {
   const rule = new schedule.RecurrenceRule();
   // rule.dayOfWeek = [new schedule.Range(1, 5)]; // 平日のみ
   rule.tz = 'Asia/Tokyo';
   rule.hour = 8; // テスト用に16時に設定
-  rule.minute =2; // テスト用に26分に設定
+  rule.minute = 2; // テスト用に2分に設定
 
   schedule.scheduleJob(rule, async function() {
     const formattedDate = getFormattedDate();
@@ -27,7 +28,6 @@ function scheduleReport(app) {
       console.error('Error message:', error);
     }
   });
-};
+}
 
-export default scheduleReport;
-export { generalMessageTs, generalChannelId };
+export { scheduleReport, generalMessageTs, generalChannelId };
