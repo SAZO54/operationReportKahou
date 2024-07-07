@@ -1,13 +1,13 @@
 import { getChannels } from './setting.js';
 
-export async function openForm(client, trigger_id, messageTs) {
+export async function openForm(client, trigger_id, message) {
   try {
-    await client.views.open({
+    const result = await client.views.open({
       trigger_id: trigger_id,
       view: {
         type: 'modal',
         callback_id: 'submit_report',
-        private_metadata: JSON.stringify({ messageTs }), // ここで messageTs を保存
+        private_metadata: JSON.stringify({ messageTs: message.ts, channel: message.channel }),
         title: {
           type: 'plain_text',
           text: '稼働報告の入力'
@@ -41,7 +41,19 @@ export async function openForm(client, trigger_id, messageTs) {
         ]
       }
     });
+    console.log('Form opened successfully:', result);
   } catch (error) {
     console.error('Error opening form:', error);
+    if (error.data && error.data.error === 'expired_trigger_id') {
+      // ユーザーにエラーメッセージを送信する
+      try {
+        await client.chat.postMessage({
+          channel: message.channel,
+          text: "申し訳ありません。フォームを開くのに時間がかかりすぎました。もう一度お試しください。"
+        });
+      } catch (postError) {
+        console.error('Error sending error message to user:', postError);
+      }
+    }
   }
-};
+}

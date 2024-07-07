@@ -1,6 +1,22 @@
+import { getChannels } from './setting.js';
+
 export async function updateHomeTab(client, user) {
   try {
     console.log('updateHomeTab function called for user:', user);
+
+    // ユーザーの設定済みチャンネルを取得
+    const userChannels = getChannels(user);
+
+    // チャンネル名を取得
+    let currentChannels = 'なし';
+    if (userChannels.length > 0) {
+      const channelInfo = await Promise.all(userChannels.map(channelId => 
+        client.conversations.info({ channel: channelId })
+      ));
+      currentChannels = channelInfo
+        .map(info => info.channel.name)
+        .join('\n');
+    }
 
     const blocks = [
       {
@@ -18,20 +34,6 @@ export async function updateHomeTab(client, user) {
         type: 'section',
         text: {
           type: 'mrkdwn',
-          text: '\n'
-        }
-      },
-      {
-        type: 'section',
-        text: {
-          type: 'mrkdwn',
-          text: '\n'
-        }
-      },
-      {
-        type: 'section',
-        text: {
-          type: 'mrkdwn',
           text: '*📮 稼働報告*'
         }
       },
@@ -39,21 +41,7 @@ export async function updateHomeTab(client, user) {
         type: 'section',
         text: {
           type: 'mrkdwn',
-          text: '\n'
-        }
-      },
-      {
-        type: 'section',
-        text: {
-          type: 'mrkdwn',
-          text: '稼働報告は、hogeチャンネルに投稿されます✨\n\n'
-        }
-      },
-      {
-        type: 'section',
-        text: {
-          type: 'mrkdwn',
-          text: '\n'
+          text: `稼働報告は、以下チャンネルに投稿されます✨\n\n${currentChannels}`
         }
       },
       {
@@ -70,24 +58,6 @@ export async function updateHomeTab(client, user) {
         ]
       },
     ];
-
-    if (user === process.env.ADMIN_USER_ID) {
-      console.log('Admin user detected, adding admin settings button');
-      // Add the new actions block for the admin button
-      blocks.push({
-        type: 'actions',
-        elements: [
-          {
-            type: 'button',
-            text: {
-              type: 'plain_text',
-              text: '🎀 投稿するチャンネルを管理する'
-            },
-            action_id: 'open_settings'
-          }
-        ]
-      });
-    }
 
     const result = await client.views.publish({
       user_id: user,

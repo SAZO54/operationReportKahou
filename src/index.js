@@ -4,13 +4,17 @@ import dotenv from 'dotenv';
 import pkg from '@slack/bolt';
 import { updateHomeTab } from './components/appHome.js';
 import { openForm as reportOpenForm } from './components/reportModal.js';
-import { openSettings, handleSettingSubmission } from './components/setting.js';
+import { openSettings, handleSettingSubmission, initializeSettings } from './components/setting.js';
 import { handleReportSubmission } from './components/transmission.js';
 import scheduleReport from './components/generalReport.js';
 import { postDailyReportMessage } from './components/appMessage.js';
 
 const { App } = pkg;
 dotenv.config();
+
+console.log('SLACK_BOT_TOKEN:', process.env.SLACK_BOT_TOKEN);
+console.log('SLACK_APP_TOKEN:', process.env.SLACK_APP_TOKEN);
+console.log('SLACK_SIGNING_SECRET:', process.env.SLACK_SIGNING_SECRET);
 
 const app = new App({
   token: process.env.SLACK_BOT_TOKEN,
@@ -20,8 +24,6 @@ const app = new App({
 });
 
 export { app };
-
-const ADMIN_USER_ID = process.env.ADMIN_USER_ID;
 
 app.event('app_home_opened', async ({ event, client }) => {
   console.log('app_home_opened event received for user:', event.user);
@@ -39,16 +41,14 @@ app.event('reaction_added', async ({ event, client }) => {
 
 app.action('report_activity', async ({ ack, body, client }) => {
   await ack();
-  const messageTs = body.message.ts;
-  await reportOpenForm(client, body.trigger_id, messageTs);
+  try {
+    await reportOpenForm(client, body.trigger_id, body.message);
+  } catch (error) {
+    console.error('Error in report_activity action:', error);
+  }
 });
 
 app.action('setting', async ({ ack, body, client }) => {
-  await ack();
-  await openSettings(client, body.trigger_id, body.user.id);
-});
-
-app.action('open_settings', async ({ ack, body, client }) => {
   await ack();
   await openSettings(client, body.trigger_id, body.user.id);
 });
@@ -60,16 +60,18 @@ app.view('submit_report', async ({ ack, body, view, client }) => {
 
 app.view('submit_setting', async ({ ack, body, view, client }) => {
   await ack();
-  await handleSettingSubmission(view);
+  await handleSettingSubmission(view, body.user.id);
 });
 
 (async () => {
+  await initializeSettings();  // 設定を初期化
   await app.start();
   console.log('⚡️ Bolt app is running!');
 
   // 手動でホームタブを更新
-  const testUserId = process.env.ADMIN_USER_ID; // 確認用に管理者のユーザーIDを使用
+  const testUserId = 'U04GZ3W1SDP'; // テスト用のユーザーID
   await updateHomeTab(app.client, testUserId);
 
   scheduleReport(app);
 })();
+

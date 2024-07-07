@@ -1,32 +1,46 @@
-import fs from 'fs';
+// setting.js
+import fs from 'fs/promises';
 
-// 永続化用のファイル（JSONファイル）パス
 const SETTINGS_FILE_PATH = './channel_settings.json';
 
-let channels = ['CHANNEL_A_ID', 'CHANNEL_B_ID'];
-
 // 設定を永続化する関数
-function saveSettings(settings) {
-  fs.writeFileSync(SETTINGS_FILE_PATH, JSON.stringify(settings, null, 2));
+async function saveSettings(settings) {
+  try {
+    await fs.writeFile(SETTINGS_FILE_PATH, JSON.stringify(settings, null, 2));
+    console.log('Settings saved successfully');
+  } catch (error) {
+    console.error('Error saving settings:', error);
+    throw error;
+  }
 }
 
 // 設定を読み込む関数
-function loadSettings() {
-  if (fs.existsSync(SETTINGS_FILE_PATH)) {
-    const data = fs.readFileSync(SETTINGS_FILE_PATH);
-    return JSON.parse(data);
+async function loadSettings() {
+  try {
+    const fileExists = await fs.access(SETTINGS_FILE_PATH).then(() => true).catch(() => false);
+    if (fileExists) {
+      const data = await fs.readFile(SETTINGS_FILE_PATH, 'utf8');
+      if (data.trim() === '') {
+        return { channels: {} };
+      }
+      return JSON.parse(data);
+    }
+  } catch (error) {
+    console.error('Error loading settings:', error);
   }
-  return {};
+  return { channels: {} };
 }
 
-let settings = loadSettings();
+let settings = { channels: {} };
+
+export async function initializeSettings() {
+  settings = await loadSettings();
+}
 
 export async function openSettings(client, trigger_id, user_id) {
-  // デバッグメッセージを追加
   console.log('Received user_id:', user_id);
 
   try {
-    // ワークスペース内のすべてのチャンネルを取得
     const result = await client.conversations.list({
       types: 'public_channel,private_channel'
     });
@@ -39,13 +53,15 @@ export async function openSettings(client, trigger_id, user_id) {
       value: channel.id
     }));
 
-    // 現在の投稿設定されているチャンネル名を取得
-    const currentChannels = result.channels.filter(channel => channels.includes(channel.id)).map(channel => channel.name).join('\n');
+    const userChannels = settings.channels[user_id] || [];
 
-    // initial_optionsの作成
-    const initialOptions = channelOptions.filter(option => channels.includes(option.value));
+    const currentChannels = result.channels
+      .filter(channel => userChannels.includes(channel.id))
+      .map(channel => channel.name)
+      .join('\n');
 
-    // デバッグメッセージを追加
+    const initialOptions = channelOptions.filter(option => userChannels.includes(option.value));
+
     console.log('currentChannels:', currentChannels);
     console.log('initialOptions:', initialOptions);
 
@@ -61,7 +77,7 @@ export async function openSettings(client, trigger_id, user_id) {
           type: 'section',
           text: {
             type: 'mrkdwn',
-            text: '*現在投稿設定されているチャンネル*\n' + currentChannels
+            text: '*現在投稿設定されているチャンネル*\n' + (currentChannels || 'なし')
           }
         },
         {
@@ -77,11 +93,12 @@ export async function openSettings(client, trigger_id, user_id) {
               type: 'plain_text',
               text: 'チャンネルを選択'
             },
-            options: channelOptions
+            options: channelOptions,
+            ...(initialOptions.length > 0 ? { initial_options: initialOptions } : {})
           },
           label: {
             type: 'plain_text',
-            text: '稼働報告を送信するチャンネルを再選択する'
+            text: '稼働報告を送信するチャンネルを選択する'
           }
         }
       ],
@@ -95,29 +112,31 @@ export async function openSettings(client, trigger_id, user_id) {
       }
     };
 
-    // initial_options が空でない場合に追加
-    if (initialOptions.length > 0) {
-      view.blocks[2].element.initial_options = initialOptions;
-    }
-
     await client.views.open({
       trigger_id: trigger_id,
       view: view
     });
   } catch (error) {
     console.error('Error opening settings:', error);
+    if (error.data) {
+      console.error('Error details:', JSON.stringify(error.data, null, 2));
+    }
   }
 }
 
-export async function handleSettingSubmission(view) {
+export async function handleSettingSubmission(view, user_id) {
   const selectedChannels = view.state.values.channel_select_block.channel_select.selected_options.map(option => option.value);
-  channels = selectedChannels;
-
-  // 設定を保存
-  settings.channels = channels;
-  saveSettings(settings);
+  
+  settings.channels[user_id] = selectedChannels;
+  
+  try {
+    await saveSettings(settings);
+    console.log(`Updated settings for user ${user_id}:`, selectedChannels);
+  } catch (error) {
+    console.error(`Failed to save settings for user ${user_id}:`, error);
+  }
 }
 
-export function getChannels() {
-  return channels;
+export function getChannels(user_id) {
+  return settings.channels[user_id] || [];
 }
