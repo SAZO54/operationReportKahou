@@ -51,7 +51,7 @@ export async function updateHomeTab(client, user) {
             type: 'button',
             text: {
               type: 'plain_text',
-              text: '🐱 投稿するチャンネルを変更する'
+              text: '🐱 投稿するチャンネルを登録する'
             },
             action_id: 'setting'
           }

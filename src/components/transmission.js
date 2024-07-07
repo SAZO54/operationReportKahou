@@ -44,75 +44,36 @@ export async function handleReportSubmission(client, { user, view }) {
     console.log('messageTs:', messageTs);
     console.log('channel:', channel);
 
-    if (!channel) {
-      const dmChannel = await client.conversations.open({ users: user.id });
-      if (!dmChannel.ok) {
-        throw new Error(`Failed to open DM channel for user ${user.id}`);
-      }
-      channel = dmChannel.channel.id;
-    }
-
     const formattedDate = getFormattedDate();
     const messageText = `${formattedDate}の稼働報告をお願いいたします✨\n\n稼働報告を行いました🎉`;
 
-    // // ダイレクトメッセージ内のメッセージを更新
-    // const dmChannel = await client.conversations.open({ users: userId });
-    // if (!dmChannel.ok) {
-    //   throw new Error(`Failed to open DM channel for user ${userId}`);
-    // }
-    // const dmChannelId = dmChannel.channel.id;
-    // console.log('dmChannel', dmChannel);
-    // console.log('dmChannelId', dmChannelId);
-
-    // // メッセージの存在を確認
-    // try {
-    //   await client.conversations.history({
-    //     channel: dmChannelId,
-    //     latest: messageTs,
-    //     inclusive: true,
-    //     limit: 1
-    //   });
-    // } catch (historyError) {
-    //   console.error('Error fetching message history:', historyError);
-    //   // メッセージが見つからない場合は新しいメッセージを送信
-    //   const newMessage = await client.chat.postMessage({
-    //     channel: dmChannelId,
-    //     text: messageText,
-    //   });
-    //   console.log('New message sent:', newMessage);
-    //   return;
-    // }
-
-    // ダイレクトメッセージの更新または新規送信
-    if (channel && messageTs) {
-      try {
-        const result = await client.chat.update({
-          channel: channel,
-          ts: messageTs,
-          text: messageText,
-          blocks: [
-            {
-              type: 'section',
-              text: {
-                type: 'mrkdwn',
-                text: messageText,
-              },
-            },
-          ],
-        });
-        console.log('DMの書き換えが完了しました🎉:', result);
-      } catch (updateError) {
-        console.error('Error updating message:', updateError);
-        // 更新に失敗した場合、新しいメッセージを送信
-        const newMessage = await client.chat.postMessage({
-          channel: channel,
-          text: messageText,
-        });
-        console.log('New message sent:', newMessage);
-      }
-    } else {
-      console.log('DMの更新をスキップしました（channel または messageTs が未設定）');
+    // ダイレクトメッセージ内のメッセージを更新
+    const dmChannel = await client.conversations.open({ users: userId });
+    if (!dmChannel.ok) {
+      throw new Error(`Failed to open DM channel for user ${userId}`);
     }
+    const dmChannelId = dmChannel.channel.id;
+    console.log('dmChannel', dmChannel);
+    console.log('dmChannelId', dmChannelId);
+    
+    const blocks = [
+      {
+        type: 'section',
+        text: {
+          type: 'mrkdwn',
+          text: messageText,
+        },
+      },
+    ];
+    
+    const result = await client.chat.update({
+      channel: dmChannelId,
+      ts: messageTs,
+      text: messageText,
+      blocks: blocks,
+    });
+
+    console.log('DMの書き換えが完了しました🎉:', result);
 
   } catch (error) {
     console.error('Error in handleReportSubmission:', error);

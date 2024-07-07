@@ -9,8 +9,8 @@ function scheduleReport(app) {
   const rule = new schedule.RecurrenceRule();
   // rule.dayOfWeek = [new schedule.Range(1, 5)]; // 平日のみ
   rule.tz = 'Asia/Tokyo';
-  rule.hour = 13; // テスト用に16時に設定
-  rule.minute =49; // テスト用に26分に設定
+  rule.hour = 14; // テスト用に16時に設定
+  rule.minute =5; // テスト用に26分に設定
 
   schedule.scheduleJob(rule, async function() {
     const formattedDate = getFormattedDate();
