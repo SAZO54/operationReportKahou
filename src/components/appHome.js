@@ -18,6 +18,14 @@ export async function updateHomeTab(client, user) {
         .join('\n');
     }
 
+    // ユーザーのプロフィールを取得
+    const userInfo = await client.users.info({ user: user });
+    const displayName = userInfo.user.profile.display_name || userInfo.user.real_name;
+
+    // 稼働時間の変更内容を取得
+    const changeWorkTimeMatch = displayName.match(/'(.*)'/);
+    const changeWorkTime = changeWorkTimeMatch ? changeWorkTimeMatch[1] : '変更なし';
+
     const blocks = [
       {
         type: 'header',
@@ -57,6 +65,23 @@ export async function updateHomeTab(client, user) {
           }
         ]
       },
+      {
+        type: 'divider'
+      },
+      {
+        type: 'section',
+        text: {
+          type: 'mrkdwn',
+          text: '*⏰ 稼働時間の変更*'
+        }
+      },
+      {
+        type: 'section',
+        text: {
+          type: 'mrkdwn',
+          text: `変更した内容は以下です。✨\n\n${changeWorkTime}`
+        }
+      }
     ];
 
     const result = await client.views.publish({

@@ -8,6 +8,7 @@ import { openSettings, handleSettingSubmission, initializeSettings } from './com
 import { handleReportSubmission } from './components/transmission.js';
 import scheduleReport from './components/generalReport.js';
 import { postDailyReportMessage } from './components/appMessage.js';
+import { handleChangeWorkTime, openChangeWorkTimeForm, handleChangeWorkTimeSubmission } from './components/changeWorkTime.js';
 
 const { App } = pkg;
 dotenv.config();
@@ -36,6 +37,9 @@ app.event('reaction_added', async ({ event, client }) => {
     console.log('出勤 reaction detected');
     const messageTs = await postDailyReportMessage(client, event.user);
     console.log('Message timestamp:', messageTs);
+  } else if (event.reaction === '変更あり') {
+    console.log('変更あり raction detected');
+    await handleChangeWorkTime(client, event.user);
   }
 });
 
@@ -51,6 +55,20 @@ app.action('report_activity', async ({ ack, body, client }) => {
 app.action('setting', async ({ ack, body, client }) => {
   await ack();
   await openSettings(client, body.trigger_id, body.user.id);
+});
+
+app.action('open_change_work_time_form', async ({ ack, body, client }) => {
+  await ack();
+  try {
+    await openChangeWorkTimeForm(client, body.trigger_id, body.message);
+  } catch (error) {
+    console.error('Error in open_change_work_time_form action:', error);
+  }
+});
+
+app.view('submit_change_work_time', async ({ ack, body, view, client }) => {
+  await ack();
+  await handleChangeWorkTimeSubmission(client, { user: body.user, view });
 });
 
 app.view('submit_report', async ({ ack, body, view, client }) => {
@@ -69,7 +87,7 @@ app.view('submit_setting', async ({ ack, body, view, client }) => {
   console.log('⚡️ Bolt app is running!');
 
   // 手動でホームタブを更新
-  const testUserId = 'U04GZ3W1SDP'; // テスト用のユーザーID
+  const testUserId = ''; // テスト用のユーザーID
   await updateHomeTab(app.client, testUserId);
 
   scheduleReport(app);
