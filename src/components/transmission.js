@@ -1,5 +1,5 @@
 import { getChannels } from './setting.js';
-import { generalMessageTs, generalChannelId } from './generalReport.js';
+import { generalChannelId, getGeneralMessageTs, reportEmitter } from './generalReport.js';
 import { getFormattedDate } from './utils.js';
 
 export async function handleReportSubmission(client, { user, view }) {
@@ -12,30 +12,54 @@ export async function handleReportSubmission(client, { user, view }) {
     const userChannels = await getChannels(userId);
 
     const userInfo = await client.users.info({ user: userId });
-    const userName = userInfo.user.real_name || userInfo.user.name;
+    console.log("userInfo:", userInfo);
+    const userName = userInfo.user.profile.display_name || userInfo.user.name;
 
     if (userChannels.length === 0) {
       console.error('No channels set for user:', userId);
       return;
     }
 
-    // チャンネルAに投稿
-    const response = await client.chat.postMessage({
-      channel: userChannels[0],
-      text: `${userName}さんの本日の稼働予定です。\n\n\`\`\`\n${report}\n\`\`\``
+    // 全てのチャンネルに投稿
+    const messagePromises = userChannels.map(async (channelId) => {
+      const response = await client.chat.postMessage({
+        channel: channelId,
+        text: `${userName}さんの本日の稼働予定です。\n\n\`\`\`\n${report}\n\`\`\``
+      });
+      console.log(`チャンネル ${channelId} に送信しました✨`);
+      return { channelId, ts: response.ts };
     });
-    console.log('送信しました✨');
+
+    const messageResults = await Promise.all(messagePromises);
+
+    const postToGeneralReport = async () => {
+      const generalMessageTs = getGeneralMessageTs();
+      console.log('generalChannelId:', generalChannelId);
+      console.log('generalMessageTs:', generalMessageTs);
+
+      if (generalChannelId && generalMessageTs) {
+        const links = messageResults.map(result => 
+          `<https://${process.env.SLACK_WORKSPACE}.slack.com/archives/${result.channelId}/p${result.ts.replace('.', '')}|View Message>`
+        ).join(' / ');
+
+        await client.chat.postMessage({
+          channel: generalChannelId,
+          thread_ts: generalMessageTs,
+          text: `${userName}さんの稼働報告: ${links}`
+        });
+        console.log('全体報告に送信しました🎉');
+      } else {
+        console.log('全体報告の送信をスキップしました（generalChannelId または generalMessageTs が未設定）');
+      }
+    };
 
     // 全体報告のメッセージスレッドにリンクを追加
-    if (generalChannelId && generalMessageTs) {
-      await client.chat.postMessage({
-        channel: generalChannelId,
-        thread_ts: generalMessageTs,
-        text: `${userName}さんの稼働報告: <https://${process.env.SLACK_WORKSPACE}.slack.com/archives/${userChannels[0]}/p${response.ts.replace('.', '')}|View Message>`
-      });
-      console.log('全体報告に送信しました🎉');
+    if (getGeneralMessageTs()) {
+      await postToGeneralReport();
     } else {
-      console.log('全体報告の送信をスキップしました（generalChannelId または generalMessageTs が未設定）');
+      reportEmitter.once('reportScheduled', async () => {
+        await postToGeneralReport();
+      });
     }
 
     const privateMetadata = JSON.parse(view.private_metadata);
@@ -77,7 +101,6 @@ export async function handleReportSubmission(client, { user, view }) {
 
   } catch (error) {
     console.error('Error in handleReportSubmission:', error);
-    // エラーの詳細をログに出力
     if (error.data) {
       console.error('Error details:', JSON.stringify(error.data, null, 2));
     }

@@ -1,7 +1,15 @@
-// setting.js
 import fs from 'fs/promises';
+import EventEmitter from 'events';
+
+export const settingsEmitter = new EventEmitter();
 
 const SETTINGS_FILE_PATH = './channel_settings.json';
+
+let settings = { channels: {} };
+
+export async function initializeSettings() {
+  settings = await loadSettings();
+}
 
 // 設定を永続化する関数
 async function saveSettings(settings) {
@@ -29,12 +37,6 @@ async function loadSettings() {
     console.error('Error loading settings:', error);
   }
   return { channels: {} };
-}
-
-let settings = { channels: {} };
-
-export async function initializeSettings() {
-  settings = await loadSettings();
 }
 
 export async function openSettings(client, trigger_id, user_id) {
@@ -132,6 +134,9 @@ export async function handleSettingSubmission(view, user_id) {
   try {
     await saveSettings(settings);
     console.log(`Updated settings for user ${user_id}:`, selectedChannels);
+
+    // 設定完了イベントを発行
+    settingsEmitter.emit('settingsUpdated', user_id, selectedChannels);
   } catch (error) {
     console.error(`Failed to save settings for user ${user_id}:`, error);
   }
